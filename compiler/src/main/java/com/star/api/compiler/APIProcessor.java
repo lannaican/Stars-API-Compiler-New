@@ -9,9 +9,11 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.star.annotation.APIService;
+import com.star.annotation.SocketService;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -59,6 +61,26 @@ public class APIProcessor extends AbstractProcessor {
                 e.printStackTrace();
             }
         }
+        //获取Socket
+        Set<? extends Element> socketElements = roundEnv.getElementsAnnotatedWith(SocketService.class);
+        for (Element element : socketElements) {
+            String serviceClass = ((TypeElement)element).getQualifiedName().toString();
+            SocketService service = element.getAnnotation(SocketService.class);
+            //新建代理类
+            TypeSpec.Builder builder = TypeSpec.classBuilder(service.value()).addModifiers(Modifier.PUBLIC);
+            List<? extends Element> enclosedElements = element.getEnclosedElements();
+            for (Element encloseElement : enclosedElements) {
+                ExecutableElement executableElement = (ExecutableElement) encloseElement;
+                builder.addMethod(buildSocketMethod(serviceClass, executableElement));
+            }
+            // 创建Java文件
+            JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
+            try {
+                javaFile.writeTo(filer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         return true;
     }
 
@@ -67,21 +89,26 @@ public class APIProcessor extends AbstractProcessor {
      */
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return Collections.singleton(APIService.class.getCanonicalName());
+        Set<String> set = new HashSet<>();
+        set.add(APIService.class.getCanonicalName());
+        set.add(SocketService.class.getCanonicalName());
+        return set;
     }
 
     /**
      * 生成方法
      */
     private MethodSpec buildMethod(String serviceClass, ExecutableElement element) {
-        String name = element.getSimpleName().toString();
-        MethodSpec.Builder builder = MethodSpec.methodBuilder(name);
+        ClassName service = ClassName.bestGuess(serviceClass);
+        ClassName manager = ClassName.get("com.star.api", "APIManager");
+        String methodName = element.getSimpleName().toString();
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC);
+        builder.addStatement("$T manager = $T.getInstance()", manager, manager);
+        builder.addStatement("$T service = ($T)manager.getService($T.class)", service, service, service);
         StringBuilder content = new StringBuilder()
-                .append("$T manager = $T.getInstance();")
-                .append("\n")
-                .append("return (($T)manager.getService($T.class)).")
-                .append(name)
+                .append("return service.")
+                .append(methodName)
                 .append("(");
         for (VariableElement variableElement : element.getParameters()) {
             ParameterSpec spec = ParameterSpec.get(variableElement);
@@ -92,9 +119,36 @@ public class APIProcessor extends AbstractProcessor {
             content.deleteCharAt(content.length() - 1);
         }
         content.append(").setResolver(manager.getResolver($T.class))");
+        builder.addStatement(content.toString(), service);
+        builder.returns(TypeName.get(element.getReturnType()));
+        return builder.build();
+    }
+
+    /**
+     * 生成方法
+     */
+    private MethodSpec buildSocketMethod(String serviceClass, ExecutableElement element) {
         ClassName service = ClassName.bestGuess(serviceClass);
-        ClassName manager = ClassName.get("com.star.api", "APIManager");
-        builder.addStatement(content.toString(), manager, manager, service, service, service);
+        ClassName manager = ClassName.get("com.star.api.socket", "SocketManager");
+        String methodName = element.getSimpleName().toString();
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
+        builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC);
+        builder.addStatement("$T manager = $T.getInstance()", manager, manager);
+        builder.addStatement("$T service = manager.getSocket($T.class)", service, service);
+        StringBuilder content = new StringBuilder()
+                .append("service.")
+                .append(methodName)
+                .append("(");
+        for (VariableElement variableElement : element.getParameters()) {
+            ParameterSpec spec = ParameterSpec.get(variableElement);
+            builder.addParameter(spec);
+            content.append(variableElement.getSimpleName()).append(",");
+        }
+        if (content.lastIndexOf(",") == content.length() - 1) {
+            content.deleteCharAt(content.length() - 1);
+        }
+        content.append(")");
+        builder.addStatement(content.toString());
         builder.returns(TypeName.get(element.getReturnType()));
         return builder.build();
     }
