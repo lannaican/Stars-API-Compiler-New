@@ -134,7 +134,7 @@ public class APIProcessor extends AbstractProcessor {
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC);
         builder.addStatement("$T manager = $T.getInstance()", manager, manager);
-        builder.addStatement("$T service = manager.getSocket($T.class)", service, service);
+        builder.addStatement("$T service = ($T)manager.getSocket($T.class).getService()", service, service, service);
         StringBuilder content = new StringBuilder()
                 .append("service.")
                 .append(methodName)
