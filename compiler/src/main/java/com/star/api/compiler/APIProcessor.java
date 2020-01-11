@@ -130,11 +130,14 @@ public class APIProcessor extends AbstractProcessor {
     private MethodSpec buildSocketMethod(String serviceClass, ExecutableElement element) {
         ClassName service = ClassName.bestGuess(serviceClass);
         ClassName manager = ClassName.get("com.star.api.socket", "SocketManager");
+        ClassName socket = ClassName.get("com.star.api.socket", "Socket");
         String methodName = element.getSimpleName().toString();
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC);
         builder.addStatement("$T manager = $T.getInstance()", manager, manager);
-        builder.addStatement("$T service = ($T)manager.getSocket($T.class).getService()", service, service, service);
+        builder.addStatement("$T o = manager.getSocket($T.class)", socket, service);
+        builder.addStatement("if(o == null) return");
+        builder.addStatement("$T service = ($T)o.getService()", service, service);
         builder.addStatement("if(service == null) return");
         StringBuilder content = new StringBuilder()
                 .append("service.")
