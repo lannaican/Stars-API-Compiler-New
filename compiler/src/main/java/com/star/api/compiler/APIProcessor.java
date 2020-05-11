@@ -11,7 +11,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.star.annotation.APIService;
 import com.star.annotation.SocketService;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,12 +29,15 @@ import javax.lang.model.element.VariableElement;
 @AutoService(Processor.class)
 public class APIProcessor extends AbstractProcessor {
 
+    private Logger logger;
     private Filer filer;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
+        logger = new Logger(processingEnv.getMessager());
         filer = processingEnv.getFiler();
+        logger.info(">>>>>>>>>>>>>API Start<<<<<<<<<<<<<");
     }
 
     @Override
@@ -55,11 +57,8 @@ public class APIProcessor extends AbstractProcessor {
                 }
                 // 创建Java文件
                 JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
-                try {
-                    javaFile.writeTo(filer);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                javaFile.writeTo(filer);
+                logger.info("create:" + javaFile.getClass().getSimpleName());
             }
             //获取Socket
             Set<? extends Element> socketElements = roundEnv.getElementsAnnotatedWith(SocketService.class);
@@ -76,10 +75,12 @@ public class APIProcessor extends AbstractProcessor {
                 // 创建Java文件
                 JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
                 javaFile.writeTo(filer);
+                logger.info("create socket:" + javaFile.getClass().getSimpleName());
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        logger.info(">>>>>>>>>>>>>API End<<<<<<<<<<<<<");
         return true;
     }
 
