@@ -12,7 +12,6 @@ import com.star.annotation.APIService;
 import com.star.annotation.SocketService;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,45 +40,45 @@ public class APIProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        //获取Service
-        Set<? extends Element> serviceElements = roundEnv.getElementsAnnotatedWith(APIService.class);
-        for (Element element : serviceElements) {
-            String serviceClass = ((TypeElement)element).getQualifiedName().toString();
-            APIService service = element.getAnnotation(APIService.class);
-            //新建代理类
-            TypeSpec.Builder builder = TypeSpec.classBuilder(service.value()).addModifiers(Modifier.PUBLIC);
-            List<? extends Element> enclosedElements = element.getEnclosedElements();
-            for (Element encloseElement : enclosedElements) {
-                ExecutableElement executableElement = (ExecutableElement) encloseElement;
-                builder.addMethod(buildMethod(serviceClass, executableElement));
+        try {
+            //获取Service
+            Set<? extends Element> serviceElements = roundEnv.getElementsAnnotatedWith(APIService.class);
+            for (Element element : serviceElements) {
+                String serviceClass = ((TypeElement)element).getQualifiedName().toString();
+                APIService service = element.getAnnotation(APIService.class);
+                //新建代理类
+                TypeSpec.Builder builder = TypeSpec.classBuilder(service.value()).addModifiers(Modifier.PUBLIC);
+                List<? extends Element> enclosedElements = element.getEnclosedElements();
+                for (Element encloseElement : enclosedElements) {
+                    ExecutableElement executableElement = (ExecutableElement) encloseElement;
+                    builder.addMethod(buildMethod(serviceClass, executableElement));
+                }
+                // 创建Java文件
+                JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
+                try {
+                    javaFile.writeTo(filer);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-            // 创建Java文件
-            JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
-            try {
+            //获取Socket
+            Set<? extends Element> socketElements = roundEnv.getElementsAnnotatedWith(SocketService.class);
+            for (Element element : socketElements) {
+                String serviceClass = ((TypeElement)element).getQualifiedName().toString();
+                SocketService service = element.getAnnotation(SocketService.class);
+                //新建代理类
+                TypeSpec.Builder builder = TypeSpec.classBuilder(service.value()).addModifiers(Modifier.PUBLIC);
+                List<? extends Element> enclosedElements = element.getEnclosedElements();
+                for (Element encloseElement : enclosedElements) {
+                    ExecutableElement executableElement = (ExecutableElement) encloseElement;
+                    builder.addMethod(buildSocketMethod(serviceClass, executableElement));
+                }
+                // 创建Java文件
+                JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
                 javaFile.writeTo(filer);
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-        }
-        //获取Socket
-        Set<? extends Element> socketElements = roundEnv.getElementsAnnotatedWith(SocketService.class);
-        for (Element element : socketElements) {
-            String serviceClass = ((TypeElement)element).getQualifiedName().toString();
-            SocketService service = element.getAnnotation(SocketService.class);
-            //新建代理类
-            TypeSpec.Builder builder = TypeSpec.classBuilder(service.value()).addModifiers(Modifier.PUBLIC);
-            List<? extends Element> enclosedElements = element.getEnclosedElements();
-            for (Element encloseElement : enclosedElements) {
-                ExecutableElement executableElement = (ExecutableElement) encloseElement;
-                builder.addMethod(buildSocketMethod(serviceClass, executableElement));
-            }
-            // 创建Java文件
-            JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
-            try {
-                javaFile.writeTo(filer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return true;
     }
