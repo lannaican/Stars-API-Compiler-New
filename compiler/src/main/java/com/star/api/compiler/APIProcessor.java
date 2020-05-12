@@ -20,6 +20,7 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -58,7 +59,7 @@ public class APIProcessor extends AbstractProcessor {
                 // 创建Java文件
                 JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
                 javaFile.writeTo(filer);
-                logger.info("create:" + javaFile.getClass().getSimpleName());
+                logger.info("create:" + service.value() + ".class");
             }
             //获取Socket
             Set<? extends Element> socketElements = roundEnv.getElementsAnnotatedWith(SocketService.class);
@@ -75,7 +76,7 @@ public class APIProcessor extends AbstractProcessor {
                 // 创建Java文件
                 JavaFile javaFile = JavaFile.builder("com.star.api.auto", builder.build()).build();
                 javaFile.writeTo(filer);
-                logger.info("create socket:" + javaFile.getClass().getSimpleName());
+                logger.info("create socket:" + service.value());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -93,6 +94,11 @@ public class APIProcessor extends AbstractProcessor {
         set.add(APIService.class.getCanonicalName());
         set.add(SocketService.class.getCanonicalName());
         return set;
+    }
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
     }
 
     /**
